@@ -1,6 +1,6 @@
 # CommitIn 🚧 Coming Soon. **Lock in** on commit messages with **CommitIn**.
 
-<img width="2000" height="2000" alt="Cmtin" src="https://github.com/user-attachments/assets/85ba844b-c9ff-4778-b6d0-ea5bddad6685" />
+<img width="170" height="170" alt="Cmtin" src="https://github.com/user-attachments/assets/85ba844b-c9ff-4778-b6d0-ea5bddad6685" />
 
 **A CLI that judges your commit messages so your teammates don't have to.**
 
