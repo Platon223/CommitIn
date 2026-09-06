@@ -1,4 +1,6 @@
-# CommitIn 🚧 Coming Soon
+# CommitIn 🚧 Coming Soon. **Lock in** on commit messages with **CommitIn**.
+
+<img width="2000" height="2000" alt="Cmtin" src="https://github.com/user-attachments/assets/85ba844b-c9ff-4778-b6d0-ea5bddad6685" />
 
 **A CLI that judges your commit messages so your teammates don't have to.**
 
@@ -8,15 +10,15 @@
 
 ### 👋 Coming from LinkedIn?
 
-Hey, thanks for checking this out. CommitIn started as a reaction to seeing way too many "fix stuff" and "asdf" commits out in the wild. Nothing's built yet — I want to see if this is actually worth building before I sink time into it. Star the repo if you'd use this, and if you've got a commit message horror story, drop it in the issues — it might end up as an example roast.
+Hey, thanks for checking this out. CommitIn started as a reaction to seeing way too many "fix stuff" and "asdf" commits out in the wild. Nothing's built yet. I want to see if this is actually worth building before I sink time into it. Star the repo if you'd use this, and if you've got a commit message horror story, drop it in the issues, it might end up as an example roast.
 
 ---
 
 ## What is CommitIn?
 
-CommitIn hooks into `git commit` and instantly roasts lazy commit messages while giving real ones proper credit. No dashboard, no config files, no leaving your terminal — just an instant, honest (and slightly savage) verdict every time you commit.
+CommitIn hooks into `git commit` and instantly roasts lazy commit messages while giving real ones proper credit. No dashboard, no config files, no leaving your terminal, just an instant, honest (and slightly savage) verdict every time you commit.
 
-The goal isn't just a laugh — it's to actually **lock in better commit habits** over time. Roast today, track your improvement tomorrow.
+The goal isn't just a laugh, it's to actually **lock in better commit habits** over time. Roast today, track your improvement tomorrow.
 
 ## Planned features
 
@@ -31,7 +33,7 @@ The goal isn't just a laugh — it's to actually **lock in better commit habits*
 
 ## Beyond the roast
 
-CommitIn doesn't just judge you — it can also generate a *good* commit message for you, based on your actual diff. If you're staring at your terminal with no idea how to summarize what you just changed, CommitIn reads the diff and suggests a clear, properly formatted message for you to use or tweak.
+CommitIn doesn't just judge you, it can also generate a *good* commit message for you, based on your actual diff. If you're staring at your terminal with no idea how to summarize what you just changed, CommitIn reads the diff and suggests a clear, properly formatted message for you to use or tweak.
 
 ## How it'll work
 
