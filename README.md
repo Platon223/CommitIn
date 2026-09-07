@@ -55,6 +55,7 @@ git commit -m "fix stuff"
 No extra commands, no extra steps, it just runs.
 
 ## Architecture
+<img width="1307" height="605" alt="CommitIn CLI" src="https://github.com/user-attachments/assets/eec20fcc-e268-458a-98c8-4135bf96bfe5" />
 
 <!-- architecture diagram goes here -->
 
