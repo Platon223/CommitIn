@@ -11,8 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Platon223/commitin/backend/internal/api"
 	"github.com/Platon223/commitin/backend/internal/config"
 	"github.com/Platon223/commitin/backend/internal/db"
+	"github.com/Platon223/commitin/backend/internal/session"
 	"github.com/Platon223/commitin/backend/internal/user"
 )
 
@@ -34,18 +36,15 @@ func main() {
 	if err := users.EnsureIndexes(ctx); err != nil {
 		log.Fatalf("startup: ensure user indexes: %v", err)
 	}
-	log.Printf("connected to MongoDB %q, user indexes ensured", cfg.MongoDB)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	})
+	sessions := session.NewStore(database)
+	if err := sessions.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("startup: ensure session indexes: %v", err)
+	}
+	log.Printf("connected to MongoDB %q, indexes ensured", cfg.MongoDB)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           mux,
+		Handler:           api.NewServer(users, sessions).Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
