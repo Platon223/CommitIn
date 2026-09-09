@@ -1,0 +1,24 @@
+# env files (keep *.env.example)
+.env
+*.local.env
+backend/.env
+
+# build output
+/bin/
+backend/server
+cmtin
+*.exe
+*.test
+*.out
+
+# go workspace sum
+go.work.sum
+
+# vendored deps
+/vendor/
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
