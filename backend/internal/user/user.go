@@ -89,6 +89,11 @@ func (s *Store) Create(ctx context.Context, u *User) error {
 	return nil
 }
 
+// GetByID looks up a user by ID. Returns ErrNotFound if there is no match.
+func (s *Store) GetByID(ctx context.Context, id bson.ObjectID) (*User, error) {
+	return s.findOne(ctx, bson.M{"_id": id})
+}
+
 // GetByEmail looks up a user by (normalized) email. Returns ErrNotFound if
 // there is no match.
 func (s *Store) GetByEmail(ctx context.Context, email string) (*User, error) {

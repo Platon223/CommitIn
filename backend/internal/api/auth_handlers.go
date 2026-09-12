@@ -106,3 +106,25 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, authResponse{Token: token, User: u})
 }
+
+// handleMe returns the authenticated user. It exists mainly so a client can
+// cheaply check whether its stored token is still valid.
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, userFromContext(r.Context()))
+}
+
+// handleLogout deletes the session behind the presented token. Idempotent:
+// logging out twice with the same (now-invalid) token is not an error at the
+// HTTP layer, since requireAuth already rejects it with 401 on the second call.
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	token, ok := bearerToken(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "missing or malformed Authorization header")
+		return
+	}
+	if err := s.sessions.Delete(r.Context(), token); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not log out")
+		return
+	}
+	writeJSON(w, http.StatusNoContent, nil)
+}
