@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Platon223/commitin/cli/internal/apiclient"
+	"github.com/Platon223/commitin/cli/internal/config"
 	"github.com/Platon223/commitin/cli/internal/prompt"
 	"github.com/spf13/cobra"
 )
@@ -16,9 +17,14 @@ func newLoginCmd() *cobra.Command {
 		Short: "Log in to your CommitIn account",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out := cmd.OutOrStdout()
-			in := prompt.NewReader(out)
 
-			var err error
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("load local config: %w", err)
+			}
+			url := resolveAPIURL(cfg)
+
+			in := prompt.NewReader(out)
 			if email == "" {
 				if email, err = in.Line("Email: "); err != nil {
 					return err
@@ -30,15 +36,20 @@ func newLoginCmd() *cobra.Command {
 				}
 			}
 
-			client := apiclient.New(apiURL)
-			resp, err := client.Login(cmd.Context(), email, password)
+			resp, err := apiclient.New(url).Login(cmd.Context(), email, password)
 			if err != nil {
 				return fmt.Errorf("login failed: %w", err)
 			}
 
+			cfg.Token = resp.Token
+			cfg.APIURL = url
+			if err := config.Save(cfg); err != nil {
+				return fmt.Errorf("save session: %w", err)
+			}
+
+			path, _ := config.Path()
 			fmt.Fprintf(out, "✓ logged in as %s <%s>\n", resp.User.Username, resp.User.Email)
-			fmt.Fprintf(out, "  token: %s\n", resp.Token)
-			fmt.Fprintln(out, "  (not saved yet — local token storage lands in Week 1 Day 5)")
+			fmt.Fprintf(out, "  session saved to %s\n", path)
 			return nil
 		},
 	}

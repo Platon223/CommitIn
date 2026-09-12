@@ -61,6 +61,26 @@ func (c *Client) Login(ctx context.Context, email, password string) (*AuthRespon
 	return &out, nil
 }
 
+// Logout revokes the session behind token on the backend.
+func (c *Client) Logout(ctx context.Context, token string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/logout", nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("could not reach CommitIn backend at %s: %w", c.baseURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return apiError(resp)
+	}
+	return nil
+}
+
 func (c *Client) postJSON(ctx context.Context, path string, body, out any) error {
 	b, err := json.Marshal(body)
 	if err != nil {
