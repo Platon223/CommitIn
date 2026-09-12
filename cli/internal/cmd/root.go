@@ -15,9 +15,13 @@ var apiURL string
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:          "cmtin",
-		Short:        "CommitIn — judges your git commit messages",
-		SilenceUsage: true,
+		Use:   "cmtin",
+		Short: "CommitIn — judges your git commit messages",
+		// Errors from signup/login/logout are already rendered as a styled
+		// box by the tui package; cobra's own "Error: ..." line would just
+		// duplicate that in plain text below it.
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 	root.PersistentFlags().StringVar(&apiURL, "api-url", envDefault("COMMITIN_API_URL", ""),
 		"CommitIn backend base URL (env COMMITIN_API_URL; falls back to the saved session, then http://localhost:8080)")

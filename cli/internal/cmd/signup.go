@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Platon223/commitin/cli/internal/apiclient"
 	"github.com/Platon223/commitin/cli/internal/config"
-	"github.com/Platon223/commitin/cli/internal/prompt"
+	"github.com/Platon223/commitin/cli/internal/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -16,46 +17,66 @@ func newSignupCmd() *cobra.Command {
 		Use:   "signup",
 		Short: "Create a CommitIn account",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			out := cmd.OutOrStdout()
-
 			cfg, err := config.Load()
 			if err != nil {
 				return fmt.Errorf("load local config: %w", err)
 			}
 			url := resolveAPIURL(cfg)
 
-			in := prompt.NewReader(out)
+			// Build a form only for whichever fields weren't given as flags,
+			// remembering each one's slot so the values can be matched back up.
+			var fields []tui.FormField
+			emailIdx, usernameIdx, passwordIdx := -1, -1, -1
 			if email == "" {
-				if email, err = in.Line("Email: "); err != nil {
-					return err
-				}
+				emailIdx = len(fields)
+				fields = append(fields, tui.FormField{Label: "Email", Placeholder: "you@example.com"})
 			}
 			if username == "" {
-				if username, err = in.Line("Username: "); err != nil {
-					return err
-				}
+				usernameIdx = len(fields)
+				fields = append(fields, tui.FormField{Label: "Username", Placeholder: "yourhandle"})
 			}
 			if password == "" {
-				if password, err = in.Hidden("Password: "); err != nil {
+				passwordIdx = len(fields)
+				fields = append(fields, tui.FormField{Label: "Password", Password: true})
+			}
+			if len(fields) > 0 {
+				values, err := tui.RunForm("Create a CommitIn account", fields)
+				if err != nil {
+					if errors.Is(err, tui.ErrCancelled) {
+						fmt.Fprintln(cmd.OutOrStdout(), "cancelled")
+						return fmt.Errorf("signup cancelled")
+					}
 					return err
+				}
+				if emailIdx >= 0 {
+					email = values[emailIdx]
+				}
+				if usernameIdx >= 0 {
+					username = values[usernameIdx]
+				}
+				if passwordIdx >= 0 {
+					password = values[passwordIdx]
 				}
 			}
 
-			resp, err := apiclient.New(url).Signup(cmd.Context(), email, username, password)
-			if err != nil {
-				return fmt.Errorf("signup failed: %w", err)
-			}
+			return tui.RunTask("Creating account...", func() ([]string, error) {
+				resp, err := apiclient.New(url).Signup(cmd.Context(), email, username, password)
+				if err != nil {
+					return nil, err
+				}
 
-			cfg.Token = resp.Token
-			cfg.APIURL = url
-			if err := config.Save(cfg); err != nil {
-				return fmt.Errorf("save session: %w", err)
-			}
+				cfg.Token = resp.Token
+				cfg.APIURL = url
+				if err := config.Save(cfg); err != nil {
+					return nil, fmt.Errorf("save session: %w", err)
+				}
 
-			path, _ := config.Path()
-			fmt.Fprintf(out, "✓ account created: %s <%s>\n", resp.User.Username, resp.User.Email)
-			fmt.Fprintf(out, "  session saved to %s\n", path)
-			return nil
+				path, _ := config.Path()
+				return []string{
+					fmt.Sprintf("Account created: %s <%s>", resp.User.Username, resp.User.Email),
+					fmt.Sprintf("Session saved to %s", path),
+				}, nil
+			})
 		},
 	}
 
