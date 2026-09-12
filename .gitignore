@@ -6,7 +6,7 @@ backend/.env
 # build output
 /bin/
 backend/server
-cmtin
+/cmtin
 *.exe
 *.test
 *.out
