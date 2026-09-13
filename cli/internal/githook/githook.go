@@ -18,15 +18,17 @@ const FileName = "commit-msg"
 const Marker = "Installed by CommitIn (cmtin init). Do not edit by hand."
 
 // Script is the hook CommitIn installs. It delegates to the cmtin binary; if
-// cmtin isn't on PATH the hook skips itself (exit 0). Otherwise cmtin's own
-// exit code decides the commit: `cmtin hook commit-msg` exits 0 to let a
-// commit through (a good message, or any infra failure -- it fails open
-// internally) and non-zero only to reject a genuinely bad message, which
-// this script must NOT swallow.
+// cmtin isn't on PATH the hook warns (so that case isn't silently
+// indistinguishable from "nothing's wrong") and skips itself (exit 0).
+// Otherwise cmtin's own exit code decides the commit: `cmtin hook commit-msg`
+// exits 0 to let a commit through (a good message, or any infra failure --
+// it fails open internally) and non-zero only to reject a genuinely bad
+// message, which this script must NOT swallow.
 const Script = `#!/bin/sh
 # ` + Marker + `
 # Regenerate with ` + "`cmtin init`" + `; remove with ` + "`cmtin uninstall`" + `.
 if ! command -v cmtin >/dev/null 2>&1; then
+  echo "CommitIn: 'cmtin' not found on PATH, skipping (add its install directory to PATH, then commit again)" >&2
   exit 0
 fi
 cmtin hook commit-msg "$1"
