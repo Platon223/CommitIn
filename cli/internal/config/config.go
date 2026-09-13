@@ -16,6 +16,10 @@ type Config struct {
 	Token        string `json:"token,omitempty"`
 	APIURL       string `json:"api_url,omitempty"`
 	AnthropicKey string `json:"anthropic_key,omitempty"`
+	// Quiet pauses the commit-msg hook's judging entirely (no API call, no
+	// output beyond a one-line notice) without uninstalling anything.
+	// Toggled via `cmtin quiet`.
+	Quiet bool `json:"quiet,omitempty"`
 }
 
 // Path returns the config file's location, honoring XDG_CONFIG_HOME.

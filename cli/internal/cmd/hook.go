@@ -38,28 +38,37 @@ func newHookCommitMsgCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		// Every early-return path below is deliberate: anything that isn't a
 		// genuine "the AI judged this message bad" result must exit 0 (nil
-		// error) so the commit is never blocked by a merge, an empty diff, a
-		// missing key, or a Claude API/network failure. Only the final
-		// bad-verdict branch returns a non-nil error.
+		// error) so the commit is never blocked by quiet mode, a merge, a
+		// missing key, an empty diff, or a Claude API/network failure. Only
+		// the final bad-verdict branch returns a non-nil error.
+		//
+		// PrintInfo is for expected no-ops (nothing went wrong, there's just
+		// nothing to judge); PrintError is reserved for things that actually
+		// went wrong, even though they still fail open.
 		RunE: func(cmd *cobra.Command, args []string) error {
 			out := cmd.OutOrStdout()
-
-			if gitcli.IsMerging() {
-				// A merge's diff --cached (index vs. one parent) doesn't
-				// represent "this commit's changes", and merge messages are
-				// auto-generated -- nothing useful to judge here.
-				fmt.Fprintln(out, "CommitIn: skipping merge commit")
-				return nil
-			}
 
 			cfg, err := config.Load()
 			if err != nil {
 				tui.PrintError(out, fmt.Sprintf("CommitIn: could not read local config, skipping: %v", err))
 				return nil
 			}
+			if cfg.Quiet {
+				tui.PrintInfo(out, "quiet mode is on, skipping (run `cmtin quiet off` to re-enable)")
+				return nil
+			}
+
+			if gitcli.IsMerging() {
+				// A merge's diff --cached (index vs. one parent) doesn't
+				// represent "this commit's changes", and merge messages are
+				// auto-generated -- nothing useful to judge here.
+				tui.PrintInfo(out, "skipping merge commit")
+				return nil
+			}
+
 			key := cfg.EffectiveAnthropicKey()
 			if key == "" {
-				fmt.Fprintln(out, "CommitIn: no Anthropic API key set, skipping (run `cmtin init` to add one)")
+				tui.PrintInfo(out, "no Anthropic API key set, skipping (run `cmtin init` to add one)")
 				return nil
 			}
 
@@ -75,7 +84,7 @@ func newHookCommitMsgCmd() *cobra.Command {
 				return nil
 			}
 			if diff == "" {
-				fmt.Fprintln(out, "CommitIn: nothing staged, skipping")
+				tui.PrintInfo(out, "nothing staged, skipping")
 				return nil
 			}
 			diff, _ = gitcli.TruncateDiff(diff, gitcli.DefaultMaxDiffLines)
@@ -100,7 +109,7 @@ func newHookCommitMsgCmd() *cobra.Command {
 			}
 
 			tui.PrintError(out, fmt.Sprintf("%d/10 -- %s", verdict.Score, verdict.Roast))
-			fmt.Fprintf(out, "\nTry this instead:\n\n  %s\n\n", verdict.Suggestion)
+			tui.PrintSuggestion(out, verdict.Suggestion)
 			return fmt.Errorf("commit message rejected")
 		},
 	}
