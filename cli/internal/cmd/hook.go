@@ -15,7 +15,9 @@ import (
 
 // judgeTimeout bounds the Claude call so a slow network can't hang a commit
 // indefinitely; a timeout is just another infra failure and fails open.
-const judgeTimeout = 20 * time.Second
+// 30s gives normal latency variance and the SDK's own retry-on-transient-error
+// behavior room to actually succeed instead of tripping the deadline.
+const judgeTimeout = 30 * time.Second
 
 // newHookCmd groups the commands the installed git hook shells out to.
 // Hidden from `cmtin --help` since users never run these directly.
@@ -81,7 +83,10 @@ func newHookCommitMsgCmd() *cobra.Command {
 			ctx, cancel := context.WithTimeout(cmd.Context(), judgeTimeout)
 			defer cancel()
 
-			verdict, err := claude.New(key, "").Judge(ctx, string(msg), diff)
+			var verdict *claude.Verdict
+			tui.RunSpinner("Judging your commit message...", func() {
+				verdict, err = claude.New(key, "").Judge(ctx, string(msg), diff)
+			})
 			if err != nil {
 				// Infra failure (network, auth, rate limit, malformed
 				// response) -- never block a commit over this.
