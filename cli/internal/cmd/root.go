@@ -28,6 +28,8 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newSignupCmd())
 	root.AddCommand(newLoginCmd())
 	root.AddCommand(newLogoutCmd())
+	root.AddCommand(newInitCmd())
+	root.AddCommand(newUninstallCmd())
 	return root
 }
 

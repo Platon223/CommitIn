@@ -5,8 +5,11 @@ package tui
 
 import "github.com/charmbracelet/lipgloss"
 
+// colorAccent and colorMuted are the CommitIn wordmark's colors: off-white
+// (#f6f4f0) and black, sampled from the logo. colorGood/colorBad stay green
+// and red -- those are universal success/failure conventions, not branding.
 var (
-	colorAccent = lipgloss.Color("212")
+	colorAccent = lipgloss.Color("#f6f4f0")
 	colorMuted  = lipgloss.Color("241")
 	colorGood   = lipgloss.Color("42")
 	colorBad    = lipgloss.Color("203")
