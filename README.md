@@ -2,7 +2,7 @@
 
 <img width="170" height="170" alt="Cmtin" src="https://github.com/user-attachments/assets/85ba844b-c9ff-4778-b6d0-ea5bddad6685" />
 
-**A CLI that judges your commit messages so your teammates don't have to.**
+**A CLI that judges your commit messages so your teammates don't have to**
 
 > ⭐ **This is just an idea right now, nothing is built.** If this repo hits **20 stars**, I'll start building it for real. Star it if you'd use this.
 
