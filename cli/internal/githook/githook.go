@@ -17,15 +17,19 @@ const FileName = "commit-msg"
 // touch a hook they didn't write.
 const Marker = "Installed by CommitIn (cmtin init). Do not edit by hand."
 
-// Script is the hook CommitIn installs. It delegates to the cmtin binary and
-// never blocks a commit itself: if cmtin isn't on PATH, or `cmtin hook
-// commit-msg` fails for any reason, the hook still exits 0.
+// Script is the hook CommitIn installs. It delegates to the cmtin binary; if
+// cmtin isn't on PATH the hook skips itself (exit 0). Otherwise cmtin's own
+// exit code decides the commit: `cmtin hook commit-msg` exits 0 to let a
+// commit through (a good message, or any infra failure -- it fails open
+// internally) and non-zero only to reject a genuinely bad message, which
+// this script must NOT swallow.
 const Script = `#!/bin/sh
 # ` + Marker + `
 # Regenerate with ` + "`cmtin init`" + `; remove with ` + "`cmtin uninstall`" + `.
-if command -v cmtin >/dev/null 2>&1; then
-  cmtin hook commit-msg "$1" || true
+if ! command -v cmtin >/dev/null 2>&1; then
+  exit 0
 fi
+cmtin hook commit-msg "$1"
 `
 
 // GitDir returns the absolute path to the current repository's .git

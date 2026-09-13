@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Platon223/commitin/cli/internal/config"
@@ -18,7 +19,9 @@ var initCommandRows = []tui.CommandRow{
 }
 
 func newInitCmd() *cobra.Command {
-	return &cobra.Command{
+	var anthropicKey string
+
+	c := &cobra.Command{
 		Use:   "init",
 		Short: "Set up CommitIn in this git repository",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -30,6 +33,34 @@ func newInitCmd() *cobra.Command {
 			}
 			if err := requireLogin(out, cfg); err != nil {
 				return err
+			}
+
+			changed := false
+			if anthropicKey != "" {
+				cfg.AnthropicKey = anthropicKey
+				changed = true
+			}
+			if cfg.EffectiveAnthropicKey() == "" {
+				values, err := tui.RunForm("Anthropic API key", []tui.FormField{
+					{Label: "Anthropic API key (used to judge your commits)", Placeholder: "sk-ant-...", Password: true},
+				})
+				if err != nil {
+					if errors.Is(err, tui.ErrCancelled) {
+						fmt.Fprintln(out, "cancelled")
+						return fmt.Errorf("init cancelled")
+					}
+					return err
+				}
+				cfg.AnthropicKey = values[0]
+				changed = true
+			}
+			if changed {
+				if err := config.Save(cfg); err != nil {
+					return fmt.Errorf("save config: %w", err)
+				}
+			}
+			if cfg.EffectiveAnthropicKey() == "" {
+				tui.PrintError(out, "no Anthropic key set -- roasts will be skipped until you run `cmtin init` again or set ANTHROPIC_API_KEY")
 			}
 
 			gitDir, err := githook.GitDir()
@@ -46,4 +77,7 @@ func newInitCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	c.Flags().StringVar(&anthropicKey, "anthropic-key", "", "Anthropic API key (prompted if omitted and not already set)")
+	return c
 }

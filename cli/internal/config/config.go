@@ -13,8 +13,9 @@ import (
 // Config is the on-disk shape of ~/.config/cmtin/config.json (or
 // $XDG_CONFIG_HOME/cmtin/config.json).
 type Config struct {
-	Token  string `json:"token,omitempty"`
-	APIURL string `json:"api_url,omitempty"`
+	Token        string `json:"token,omitempty"`
+	APIURL       string `json:"api_url,omitempty"`
+	AnthropicKey string `json:"anthropic_key,omitempty"`
 }
 
 // Path returns the config file's location, honoring XDG_CONFIG_HOME.
@@ -56,6 +57,16 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parse config at %s: %w", path, err)
 	}
 	return &c, nil
+}
+
+// EffectiveAnthropicKey returns the Anthropic API key to use: the
+// ANTHROPIC_API_KEY environment variable if set, otherwise the key saved in
+// this config.
+func (c *Config) EffectiveAnthropicKey() string {
+	if v := os.Getenv("ANTHROPIC_API_KEY"); v != "" {
+		return v
+	}
+	return c.AnthropicKey
 }
 
 // Save writes the config file, creating its directory if needed. The file is
