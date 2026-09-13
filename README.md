@@ -28,7 +28,7 @@ The goal isn't just a laugh, it's to actually **lock in better commit habits** o
 - Sign up / log in, entirely from the terminal — no browser required
 
 **Pro**
-- Metrics over time — track your commit quality trend and see if you're actually improving
+- Metrics over time, track your commit quality trend and see if you're actually improving
 - Upgrade with one command (`cmtin upgrade`), payment handled securely via Stripe
 
 ## Beyond the roast

@@ -61,9 +61,10 @@ var verdictTool = anthropic.ToolParam{
 	InputSchema: anthropic.ToolInputSchemaParam{
 		Properties: map[string]any{
 			"score": map[string]any{
+				// Claude's strict custom-tool schemas reject "minimum"/"maximum"
+				// on integer properties (400 invalid_request_error) -- the 0-10
+				// range is enforced in Go instead, in the caller below.
 				"type":        "integer",
-				"minimum":     0,
-				"maximum":     10,
 				"description": "quality score from 0 (lazy/useless) to 10 (excellent)",
 			},
 			"roast": map[string]any{
