@@ -4,7 +4,7 @@ CommitIn handles account passwords, session tokens, and your Anthropic API key, 
 
 ## Reporting a vulnerability
 
-Please **do not open a public issue** for a security problem. Use GitHub's private reporting instead: open the repository's **Security** tab and choose **Report a vulnerability**. Include what you found, how to reproduce it, and its impact.
+Please **do not open a public issue** for a security problem. Email **platon.tikhnenko@gmail.com** with the subject line `CommitIn security`, and include what you found, how to reproduce it, and its impact.
 
 You'll get an acknowledgement as soon as it's seen, and a fix or an explanation after that. Please give a reasonable window to ship a fix before disclosing publicly.
 
