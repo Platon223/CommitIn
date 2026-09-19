@@ -5,6 +5,7 @@ import (
 	"io"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -30,6 +31,9 @@ type StatsView struct {
 	PassingScore int
 	Current      PeriodView
 	Previous     PeriodView
+	// Daily and Today drive the trend chart. Leave either empty to omit it.
+	Daily []DayView
+	Today time.Time
 }
 
 // deltaKind says how a change should be colored.
@@ -101,8 +105,16 @@ func renderStats(v StatsView) string {
 			delta(formatDelta(float64(cur.Attempts), float64(prev.Attempts), 0, "", deltaNeutral))),
 		statsRow("Rejected", fmt.Sprintf("%d (%.0f%%)", cur.Rejected, cur.rejectionRate()),
 			delta(formatDelta(cur.rejectionRate(), prev.rejectionRate(), 1, " pts", deltaLowerIsBetter))),
-		"",
-		helpStyle.Render(fmt.Sprintf("rejected = scored below %d, blocked by the commit gate", v.PassingScore)),
+	}
+	trend := renderTrend(v.Daily, v.Today, v.WindowDays, v.PassingScore)
+	if trend != nil {
+		lines = append(lines, "")
+		lines = append(lines, trend...)
+	}
+	lines = append(lines, "",
+		helpStyle.Render(fmt.Sprintf("rejected = scored below %d, blocked by the commit gate", v.PassingScore)))
+	if trend != nil {
+		lines = append(lines, helpStyle.Render("chart: · no commits that day, red = averaged below the pass mark"))
 	}
 	return boxStyle(colorMuted).Render(strings.Join(lines, "\n"))
 }

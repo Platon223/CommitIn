@@ -47,11 +47,17 @@ func newStatsCmd() *cobra.Command {
 				tui.PrintEmptyStats(out, st.WindowDays)
 				return nil
 			}
+			daily := make([]tui.DayView, len(st.Daily))
+			for i, d := range st.Daily {
+				daily[i] = tui.DayView{Date: d.Date, Attempts: d.Attempts, Average: d.AverageScore}
+			}
 			tui.PrintStats(out, tui.StatsView{
 				WindowDays:   st.WindowDays,
 				PassingScore: st.PassingScore,
 				Current:      tui.PeriodView{Attempts: st.Current.Attempts, Average: st.Current.AverageScore, Rejected: st.Current.Rejected},
 				Previous:     tui.PeriodView{Attempts: st.Previous.Attempts, Average: st.Previous.AverageScore, Rejected: st.Previous.Rejected},
+				Daily:        daily,
+				Today:        time.Now().UTC(),
 			})
 			return nil
 		},
