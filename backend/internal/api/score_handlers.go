@@ -63,3 +63,14 @@ func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 		"min_commits": score.LeaderboardMinCommits,
 	})
 }
+
+// handleStats returns the caller's own history -- never anyone else's.
+func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
+	u := userFromContext(r.Context())
+	st, err := s.scores.Stats(r.Context(), u.ID, score.StatsWindow)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load stats")
+		return
+	}
+	writeJSON(w, http.StatusOK, st)
+}

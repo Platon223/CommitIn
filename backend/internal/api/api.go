@@ -33,6 +33,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /logout", s.requireAuth(s.handleLogout))
 	mux.HandleFunc("POST /scores", s.requireAuth(s.handleSubmitScore))
 	mux.HandleFunc("GET /leaderboard", s.handleLeaderboard)
+	mux.HandleFunc("GET /stats", s.requireAuth(s.handleStats))
 	return recoverAndLog(mux)
 }
 

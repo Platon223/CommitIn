@@ -18,6 +18,7 @@ var initCommandRows = []tui.CommandRow{
 	{Command: "cmtin uninstall", Description: "Remove the hook"},
 	{Command: "cmtin quiet", Description: "Pause or resume commit-msg judging"},
 	{Command: "cmtin leaderboard", Description: "Show the public leaderboard"},
+	{Command: "cmtin stats", Description: "Show your score history and trend"},
 }
 
 func newInitCmd() *cobra.Command {

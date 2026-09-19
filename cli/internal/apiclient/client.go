@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -115,10 +116,50 @@ func (c *Client) Leaderboard(ctx context.Context) (*LeaderboardResult, error) {
 	return &out, nil
 }
 
+// PeriodStats mirrors one window's summary from GET /stats.
+type PeriodStats struct {
+	Attempts     int     `json:"attempts"`
+	AverageScore float64 `json:"average_score"`
+	Rejected     int     `json:"rejected"`
+}
+
+// DayStats mirrors one UTC-day bucket from GET /stats.
+type DayStats struct {
+	Date         string  `json:"date"`
+	Attempts     int     `json:"attempts"`
+	AverageScore float64 `json:"average_score"`
+}
+
+// StatsResult mirrors GET /stats: the caller's current and previous windows
+// plus per-day buckets for the current one.
+type StatsResult struct {
+	WindowDays   int         `json:"window_days"`
+	PassingScore int         `json:"passing_score"`
+	Current      PeriodStats `json:"current"`
+	Previous     PeriodStats `json:"previous"`
+	Daily        []DayStats  `json:"daily"`
+}
+
+// Stats fetches the authenticated user's own score history.
+func (c *Client) Stats(ctx context.Context, token string) (*StatsResult, error) {
+	var out StatsResult
+	if err := c.getAuthJSON(ctx, "/stats", token, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func (c *Client) getJSON(ctx context.Context, path string, out any) error {
+	return c.getAuthJSON(ctx, path, "", out)
+}
+
+func (c *Client) getAuthJSON(ctx context.Context, path, token string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := c.http.Do(req)
@@ -174,15 +215,33 @@ func (c *Client) postAuthJSON(ctx context.Context, path, token string, body, out
 	return nil
 }
 
-// apiError turns a non-2xx response into an error, preferring the backend's
-// {"error": "..."} body when present.
+// APIError is a non-2xx response from the backend. Error() returns the
+// backend's own message, so callers that only print it are unaffected; callers
+// that care about the status (e.g. an expired session) can errors.As it.
+type APIError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *APIError) Error() string { return e.Message }
+
+// IsUnauthorized reports whether err is a 401 from the backend -- for an
+// authed call, that means the saved session token is expired or revoked.
+func IsUnauthorized(err error) bool {
+	var ae *APIError
+	return errors.As(err, &ae) && ae.StatusCode == http.StatusUnauthorized
+}
+
+// apiError turns a non-2xx response into an *APIError, preferring the
+// backend's {"error": "..."} body when present.
 func apiError(resp *http.Response) error {
 	var body struct {
 		Error string `json:"error"`
 	}
 	_ = json.NewDecoder(resp.Body).Decode(&body)
-	if body.Error != "" {
-		return fmt.Errorf("%s", body.Error)
+	msg := body.Error
+	if msg == "" {
+		msg = fmt.Sprintf("request failed: %s", resp.Status)
 	}
-	return fmt.Errorf("request failed: %s", resp.Status)
+	return &APIError{StatusCode: resp.StatusCode, Message: msg}
 }

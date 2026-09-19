@@ -4,6 +4,7 @@ package score
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -173,4 +174,135 @@ func (s *Store) Leaderboard(ctx context.Context, window time.Duration, minCommit
 		return nil, err
 	}
 	return entries, nil
+}
+
+// PassingScore is the minimum score the CLI's commit-msg gate accepts.
+//
+// This mirrors cli/internal/claude.PassingScore -- they're separate Go
+// modules with no shared package yet, so the two constants have to be kept
+// in sync by hand. It's only used here to classify a stored score as
+// "rejected" for stats; the gate itself lives in the CLI.
+const PassingScore = 6
+
+// StatsWindow is the length of one stats period. Stats compares the most
+// recent window against the window immediately before it.
+const StatsWindow = 30 * 24 * time.Hour
+
+// PeriodStats summarizes one window of a user's judged attempts.
+type PeriodStats struct {
+	Attempts     int     `json:"attempts"`
+	AverageScore float64 `json:"average_score"`
+	// Rejected counts attempts scoring below PassingScore -- the ones the
+	// gate blocked. Divide by Attempts for a rejection rate.
+	Rejected int `json:"rejected"`
+}
+
+// DayStats is one UTC calendar day inside the current window. Days with no
+// attempts are omitted.
+type DayStats struct {
+	Date         string  `json:"date"` // YYYY-MM-DD, UTC
+	Attempts     int     `json:"attempts"`
+	AverageScore float64 `json:"average_score"`
+}
+
+// Stats is one user's history: the current window, the equal-length window
+// before it (for a trend), and per-day buckets for the current window.
+type Stats struct {
+	WindowDays   int         `json:"window_days"`
+	PassingScore int         `json:"passing_score"`
+	Current      PeriodStats `json:"current"`
+	Previous     PeriodStats `json:"previous"`
+	Daily        []DayStats  `json:"daily"`
+}
+
+type periodRow struct {
+	Attempts int     `bson:"attempts"`
+	Avg      float64 `bson:"avg"`
+	Rejected int     `bson:"rejected"`
+}
+
+type dayRow struct {
+	Date     string  `bson:"_id"`
+	Attempts int     `bson:"attempts"`
+	Avg      float64 `bson:"avg"`
+}
+
+func round2(x float64) float64 { return math.Round(x*100) / 100 }
+
+func toPeriod(rows []periodRow) PeriodStats {
+	if len(rows) == 0 {
+		return PeriodStats{}
+	}
+	r := rows[0]
+	return PeriodStats{Attempts: r.Attempts, AverageScore: round2(r.Avg), Rejected: r.Rejected}
+}
+
+// Stats returns userID's history for the last window and the window before
+// it, in a single aggregation round trip ($facet). Day buckets are UTC.
+func (s *Store) Stats(ctx context.Context, userID bson.ObjectID, window time.Duration) (*Stats, error) {
+	now := time.Now().UTC()
+	curStart := now.Add(-window)
+	prevStart := now.Add(-2 * window)
+
+	inCurrent := bson.D{{Key: "$match", Value: bson.D{{Key: "created_at", Value: bson.D{{Key: "$gte", Value: curStart}}}}}}
+	inPrevious := bson.D{{Key: "$match", Value: bson.D{{Key: "created_at", Value: bson.D{{Key: "$lt", Value: curStart}}}}}}
+	summarize := bson.D{{Key: "$group", Value: bson.D{
+		{Key: "_id", Value: nil},
+		{Key: "attempts", Value: bson.D{{Key: "$sum", Value: 1}}},
+		{Key: "avg", Value: bson.D{{Key: "$avg", Value: "$score"}}},
+		{Key: "rejected", Value: bson.D{{Key: "$sum", Value: bson.D{{Key: "$cond", Value: bson.A{
+			bson.D{{Key: "$lt", Value: bson.A{"$score", PassingScore}}}, 1, 0,
+		}}}}}},
+	}}}
+	byDay := bson.D{{Key: "$group", Value: bson.D{
+		{Key: "_id", Value: bson.D{{Key: "$dateToString", Value: bson.D{
+			{Key: "format", Value: "%Y-%m-%d"},
+			{Key: "date", Value: "$created_at"},
+			{Key: "timezone", Value: "UTC"},
+		}}}},
+		{Key: "attempts", Value: bson.D{{Key: "$sum", Value: 1}}},
+		{Key: "avg", Value: bson.D{{Key: "$avg", Value: "$score"}}},
+	}}}
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$match", Value: bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "created_at", Value: bson.D{{Key: "$gte", Value: prevStart}}},
+		}}},
+		{{Key: "$facet", Value: bson.D{
+			{Key: "current", Value: bson.A{inCurrent, summarize}},
+			{Key: "previous", Value: bson.A{inPrevious, summarize}},
+			{Key: "daily", Value: bson.A{inCurrent, byDay, bson.D{{Key: "$sort", Value: bson.D{{Key: "_id", Value: 1}}}}}},
+		}}},
+	}
+
+	cur, err := s.col.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var res []struct {
+		Current  []periodRow `bson:"current"`
+		Previous []periodRow `bson:"previous"`
+		Daily    []dayRow    `bson:"daily"`
+	}
+	if err := cur.All(ctx, &res); err != nil {
+		return nil, err
+	}
+
+	out := &Stats{
+		WindowDays:   int(window.Hours() / 24),
+		PassingScore: PassingScore,
+		Daily:        []DayStats{},
+	}
+	if len(res) == 0 { // $facet always yields one doc, but don't index blindly
+		return out, nil
+	}
+	out.Current = toPeriod(res[0].Current)
+	out.Previous = toPeriod(res[0].Previous)
+	for _, d := range res[0].Daily {
+		out.Daily = append(out.Daily, DayStats{Date: d.Date, Attempts: d.Attempts, AverageScore: round2(d.Avg)})
+	}
+	return out, nil
 }
