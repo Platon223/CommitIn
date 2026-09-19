@@ -32,6 +32,7 @@ func newLogoutCmd() *cobra.Command {
 				}
 
 				cfg.Token = ""
+				cfg.Username = ""
 				if err := config.Save(cfg); err != nil {
 					return nil, fmt.Errorf("clear local session: %w", err)
 				}

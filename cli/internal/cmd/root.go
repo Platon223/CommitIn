@@ -32,6 +32,7 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newUninstallCmd())
 	root.AddCommand(newHookCmd())
 	root.AddCommand(newQuietCmd())
+	root.AddCommand(newLeaderboardCmd())
 	return root
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/Platon223/commitin/backend/internal/api"
 	"github.com/Platon223/commitin/backend/internal/config"
 	"github.com/Platon223/commitin/backend/internal/db"
+	"github.com/Platon223/commitin/backend/internal/score"
 	"github.com/Platon223/commitin/backend/internal/session"
 	"github.com/Platon223/commitin/backend/internal/user"
 )
@@ -40,11 +41,15 @@ func main() {
 	if err := sessions.EnsureIndexes(ctx); err != nil {
 		log.Fatalf("startup: ensure session indexes: %v", err)
 	}
+	scores := score.NewStore(database)
+	if err := scores.EnsureIndexes(ctx); err != nil {
+		log.Fatalf("startup: ensure score indexes: %v", err)
+	}
 	log.Printf("connected to MongoDB %q, indexes ensured", cfg.MongoDB)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           api.NewServer(users, sessions).Routes(),
+		Handler:           api.NewServer(users, sessions, scores).Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

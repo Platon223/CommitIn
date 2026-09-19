@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -37,6 +38,17 @@ func TruncateDiff(diff string, maxLines int) (result string, truncated bool) {
 		return diff, false
 	}
 	return strings.Join(lines[:maxLines], "\n") + "\n", true
+}
+
+// RepoName returns the current repository's directory name (the last path
+// component of its top-level working directory), used to label submitted
+// scores.
+func RepoName() (string, error) {
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse --show-toplevel: %w", err)
+	}
+	return filepath.Base(strings.TrimSpace(string(out))), nil
 }
 
 // IsMerging reports whether the repository is currently completing a merge

@@ -58,6 +58,7 @@ func newLoginCmd() *cobra.Command {
 
 				cfg.Token = resp.Token
 				cfg.APIURL = url
+				cfg.Username = resp.User.Username
 				if err := config.Save(cfg); err != nil {
 					return nil, fmt.Errorf("save session: %w", err)
 				}

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Platon223/commitin/backend/internal/score"
 	"github.com/Platon223/commitin/backend/internal/session"
 	"github.com/Platon223/commitin/backend/internal/user"
 )
@@ -14,11 +15,12 @@ import (
 type Server struct {
 	users    *user.Store
 	sessions *session.Store
+	scores   *score.Store
 }
 
 // NewServer builds a Server.
-func NewServer(users *user.Store, sessions *session.Store) *Server {
-	return &Server{users: users, sessions: sessions}
+func NewServer(users *user.Store, sessions *session.Store, scores *score.Store) *Server {
+	return &Server{users: users, sessions: sessions, scores: scores}
 }
 
 // Routes returns the HTTP handler for the whole API.
@@ -29,6 +31,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("GET /me", s.requireAuth(s.handleMe))
 	mux.HandleFunc("POST /logout", s.requireAuth(s.handleLogout))
+	mux.HandleFunc("POST /scores", s.requireAuth(s.handleSubmitScore))
+	mux.HandleFunc("GET /leaderboard", s.handleLeaderboard)
 	return recoverAndLog(mux)
 }
 

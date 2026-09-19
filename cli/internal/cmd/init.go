@@ -16,6 +16,8 @@ var initCommandRows = []tui.CommandRow{
 	{Command: "cmtin logout", Description: "Log out and clear the local session"},
 	{Command: "cmtin init", Description: "Install the commit-msg hook in this repo"},
 	{Command: "cmtin uninstall", Description: "Remove the hook"},
+	{Command: "cmtin quiet", Description: "Pause or resume commit-msg judging"},
+	{Command: "cmtin leaderboard", Description: "Show the public leaderboard"},
 }
 
 func newInitCmd() *cobra.Command {

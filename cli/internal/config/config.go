@@ -16,6 +16,10 @@ type Config struct {
 	Token        string `json:"token,omitempty"`
 	APIURL       string `json:"api_url,omitempty"`
 	AnthropicKey string `json:"anthropic_key,omitempty"`
+	// Username is saved at signup/login purely as a display convenience
+	// (e.g. to highlight the current user on `cmtin leaderboard`) and
+	// cleared on logout. It is not itself a credential.
+	Username string `json:"username,omitempty"`
 	// Quiet pauses the commit-msg hook's judging entirely (no API call, no
 	// output beyond a one-line notice) without uninstalling anything.
 	// Toggled via `cmtin quiet`.

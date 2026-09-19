@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/Platon223/commitin/cli/internal/apiclient"
 	"github.com/Platon223/commitin/cli/internal/claude"
 	"github.com/Platon223/commitin/cli/internal/config"
 	"github.com/Platon223/commitin/cli/internal/gitcli"
@@ -18,6 +21,9 @@ import (
 // 30s gives normal latency variance and the SDK's own retry-on-transient-error
 // behavior room to actually succeed instead of tripping the deadline.
 const judgeTimeout = 30 * time.Second
+
+// submitScoreTimeout bounds the (much smaller/faster) score submission call.
+const submitScoreTimeout = 10 * time.Second
 
 // newHookCmd groups the commands the installed git hook shells out to.
 // Hidden from `cmtin --help` since users never run these directly.
@@ -89,12 +95,12 @@ func newHookCommitMsgCmd() *cobra.Command {
 			}
 			diff, _ = gitcli.TruncateDiff(diff, gitcli.DefaultMaxDiffLines)
 
-			ctx, cancel := context.WithTimeout(cmd.Context(), judgeTimeout)
+			judgeCtx, cancel := context.WithTimeout(cmd.Context(), judgeTimeout)
 			defer cancel()
 
 			var verdict *claude.Verdict
 			tui.RunSpinner("Judging your commit message...", func() {
-				verdict, err = claude.New(key, "").Judge(ctx, string(msg), diff)
+				verdict, err = claude.New(key, "").Judge(judgeCtx, string(msg), diff)
 			})
 			if err != nil {
 				// Infra failure (network, auth, rate limit, malformed
@@ -105,12 +111,45 @@ func newHookCommitMsgCmd() *cobra.Command {
 
 			if verdict.Good() {
 				tui.PrintSuccess(out, fmt.Sprintf("%d/10 -- %s", verdict.Score, verdict.Roast))
+				submitScore(cmd, cfg, verdict.Score)
 				return nil
 			}
 
 			tui.PrintError(out, fmt.Sprintf("%d/10 -- %s", verdict.Score, verdict.Roast))
 			tui.PrintSuggestion(out, verdict.Suggestion)
+			submitScore(cmd, cfg, verdict.Score)
 			return fmt.Errorf("commit message rejected")
 		},
 	}
+}
+
+// submitScore records a judged attempt (accepted or rejected) for the
+// leaderboard/stats. It's silent and best-effort: skipped entirely if the
+// user isn't logged in (score submission needs the CommitIn session token,
+// separately from the Anthropic key that judging itself needs -- so
+// `cmtin logout` naturally stops contributing to the leaderboard even
+// though local judging keeps working), and any failure is swallowed rather
+// than printed, since it's background bookkeeping, not the roast itself.
+func submitScore(cmd *cobra.Command, cfg *config.Config, score int) {
+	if cfg.Token == "" {
+		return
+	}
+	repoName, err := gitcli.RepoName()
+	if err != nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(cmd.Context(), submitScoreTimeout)
+	defer cancel()
+	_ = apiclient.New(resolveAPIURL(cfg)).SubmitScore(ctx, cfg.Token, score, randomAttemptID(), repoName)
+}
+
+// randomAttemptID returns an opaque per-attempt identifier for score dedup.
+func randomAttemptID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		// crypto/rand.Read practically never fails on supported platforms;
+		// fall back rather than let this block a commit either way.
+		return fmt.Sprintf("fallback-%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b)
 }

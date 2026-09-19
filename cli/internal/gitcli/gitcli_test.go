@@ -69,6 +69,24 @@ func TestDiffCachedEmpty(t *testing.T) {
 	}
 }
 
+func TestRepoName(t *testing.T) {
+	dir := chdirTemp(t)
+	// git resolves symlinks in --show-toplevel; compare against the
+	// resolved path so this doesn't flake on a symlinked temp dir.
+	resolved, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	name, err := RepoName()
+	if err != nil {
+		t.Fatalf("RepoName: %v", err)
+	}
+	if want := filepath.Base(resolved); name != want {
+		t.Fatalf("RepoName() = %q, want %q", name, want)
+	}
+}
+
 func TestTruncateDiffUnderLimit(t *testing.T) {
 	diff := "a\nb\nc\n"
 	got, truncated := TruncateDiff(diff, 10)
