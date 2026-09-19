@@ -57,5 +57,9 @@ func (s *Server) handleLeaderboard(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not load leaderboard")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"leaderboard": entries})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"leaderboard": entries,
+		"window_days": int(score.LeaderboardWindow.Hours() / 24),
+		"min_commits": score.LeaderboardMinCommits,
+	})
 }

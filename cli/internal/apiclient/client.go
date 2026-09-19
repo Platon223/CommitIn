@@ -97,15 +97,22 @@ type LeaderboardEntry struct {
 	CommitCount  int     `json:"commit_count"`
 }
 
+// LeaderboardResult is the full GET /leaderboard response: the ranked rows
+// plus the ranking rules the backend applied (so the CLI never hardcodes
+// them).
+type LeaderboardResult struct {
+	Entries    []LeaderboardEntry `json:"leaderboard"`
+	WindowDays int                `json:"window_days"`
+	MinCommits int                `json:"min_commits"`
+}
+
 // Leaderboard fetches the public leaderboard (no auth required).
-func (c *Client) Leaderboard(ctx context.Context) ([]LeaderboardEntry, error) {
-	var out struct {
-		Leaderboard []LeaderboardEntry `json:"leaderboard"`
-	}
+func (c *Client) Leaderboard(ctx context.Context) (*LeaderboardResult, error) {
+	var out LeaderboardResult
 	if err := c.getJSON(ctx, "/leaderboard", &out); err != nil {
 		return nil, err
 	}
-	return out.Leaderboard, nil
+	return &out, nil
 }
 
 func (c *Client) getJSON(ctx context.Context, path string, out any) error {

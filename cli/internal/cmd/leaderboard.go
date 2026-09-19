@@ -30,18 +30,19 @@ func newLeaderboardCmd() *cobra.Command {
 			ctx, cancel := context.WithTimeout(cmd.Context(), leaderboardTimeout)
 			defer cancel()
 
-			entries, err := apiclient.New(resolveAPIURL(cfg)).Leaderboard(ctx)
+			result, err := apiclient.New(resolveAPIURL(cfg)).Leaderboard(ctx)
 			if err != nil {
 				tui.PrintError(out, fmt.Sprintf("could not load leaderboard: %v", err))
 				return err
 			}
-			if len(entries) == 0 {
-				tui.PrintInfo(out, "leaderboard is empty -- be the first to make the cut (10 judged commits in the last 30 days)")
+			info := tui.LeaderboardInfo{WindowDays: result.WindowDays, MinCommits: result.MinCommits}
+			if len(result.Entries) == 0 {
+				tui.PrintEmptyLeaderboard(out, info)
 				return nil
 			}
 
-			rows := make([]tui.LeaderboardRow, len(entries))
-			for i, e := range entries {
+			rows := make([]tui.LeaderboardRow, len(result.Entries))
+			for i, e := range result.Entries {
 				rows[i] = tui.LeaderboardRow{
 					Rank:          i + 1,
 					Username:      e.Username,
@@ -50,7 +51,7 @@ func newLeaderboardCmd() *cobra.Command {
 					IsCurrentUser: cfg.Token != "" && cfg.Username != "" && e.Username == cfg.Username,
 				}
 			}
-			tui.RunLeaderboard(rows)
+			tui.RunLeaderboard(rows, info)
 			return nil
 		},
 	}
