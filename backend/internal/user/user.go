@@ -12,14 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-// Plan is a user's subscription tier.
-type Plan string
-
-const (
-	PlanFree Plan = "free"
-	PlanPro  Plan = "pro"
-)
-
 // User is a CommitIn account.
 //
 // Email and Username are always stored normalized (trimmed + lowercased); the
@@ -30,7 +22,6 @@ type User struct {
 	Email        string        `bson:"email" json:"email"`
 	Username     string        `bson:"username" json:"username"`
 	PasswordHash string        `bson:"password_hash" json:"-"`
-	Plan         Plan          `bson:"plan" json:"plan"`
 	CreatedAt    time.Time     `bson:"created_at" json:"created_at"`
 	UpdatedAt    time.Time     `bson:"updated_at" json:"updated_at"`
 }
@@ -67,16 +58,13 @@ func (s *Store) EnsureIndexes(ctx context.Context) error {
 	return err
 }
 
-// Create inserts a new user. Email and Username are normalized here; Plan
-// defaults to free. Returns ErrDuplicate if the email or username is taken.
+// Create inserts a new user. Email and Username are normalized here. Returns
+// ErrDuplicate if the email or username is taken.
 func (s *Store) Create(ctx context.Context, u *User) error {
 	now := time.Now().UTC()
 	u.ID = bson.NewObjectID()
 	u.Email = normalize(u.Email)
 	u.Username = normalize(u.Username)
-	if u.Plan == "" {
-		u.Plan = PlanFree
-	}
 	u.CreatedAt = now
 	u.UpdatedAt = now
 
