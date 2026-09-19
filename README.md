@@ -6,8 +6,6 @@
 
 CommitIn (`cmtin`) sits on `git commit`. It sends your message and your staged diff to Claude, and if the message is lazy it **rejects the commit**, roasts you, and hands you a better message written from the actual diff. If the message is good, the commit goes through and you get a compliment.
 
-> **Status: in development.** A hosted CommitIn service (one shared backend, so one global leaderboard) will launch when it's ready. Until then you run the backend yourself; see [Getting started](#getting-started).
-
 Everything happens in the terminal. There is no dashboard, and there is no paid tier: the leaderboard and your personal stats are free, and you bring your own Anthropic API key, so judging costs the project nothing.
 
 ```text
@@ -52,20 +50,9 @@ flowchart LR
 
 - Go 1.26+ and git
 - An [Anthropic API key](https://console.anthropic.com/) (judging uses Claude Haiku 4.5, billed to your key; a judged commit is a tiny request)
-- A CommitIn backend to talk to (see below)
 - A real terminal: `signup`, `login`, `logout` and `init` use interactive forms
 
-### 1. Run a backend (until the hosted service launches)
-
-The hosted service isn't live yet, so for now you run the backend yourself. It's one small Go binary plus any MongoDB (the free Atlas tier is plenty, or a local `mongod`). Everyone who points their CLI at a backend shares that backend's leaderboard. Once the hosted service launches, you'll skip this step entirely.
-
-```bash
-cd backend
-cp .env.example .env        # then set MONGODB_URI (and optionally MONGO_DB, PORT)
-go run ./cmd/server         # listens on :8080
-```
-
-### 2. Build the CLI
+### 1. Build the CLI
 
 ```bash
 cd cli
@@ -80,15 +67,15 @@ install -m 755 ../bin/cmtin ~/.local/bin/cmtin
 
 (If it can't be found, the hook prints a warning and lets the commit through.)
 
-### 3. Set up
+### 2. Set up
 
 ```bash
-cmtin signup            # create an account on your backend
+cmtin signup            # create your account
 cmtin init              # in any git repo: installs the hook, asks for your Anthropic key
 git commit -m "wip"     # meet your new reviewer
 ```
 
-The CLI talks to `http://localhost:8080` by default (that default will point at the hosted service once it launches). Point it elsewhere with `--api-url` or `COMMITIN_API_URL`.
+By default the CLI talks to the hosted CommitIn service. To use your own backend instead, see [Self-hosting](#self-hosting).
 
 ## Commands
 
@@ -109,6 +96,25 @@ The CLI talks to `http://localhost:8080` by default (that default will point at 
 | Backend URL | `--api-url`, `COMMITIN_API_URL`, or the URL saved at login |
 | Config file | `$XDG_CONFIG_HOME/cmtin/config.json` (default `~/.config/cmtin/config.json`, mode 0600) |
 | Backend | `MONGODB_URI` (required), `MONGO_DB` (default `commitin`), `PORT` (default `8080`) |
+
+## Self-hosting
+
+The backend is one small Go binary plus any MongoDB (the free Atlas tier is plenty, or a local `mongod`). Run your own if you want a private leaderboard for a team, or to hack on the server.
+
+```bash
+cd backend
+cp .env.example .env        # then set MONGODB_URI (and optionally MONGO_DB, PORT)
+go run ./cmd/server         # listens on :8080
+```
+
+Then point the CLI at it, either per command or for your shell:
+
+```bash
+cmtin signup --api-url http://localhost:8080
+export COMMITIN_API_URL=http://localhost:8080
+```
+
+Everyone pointed at the same backend shares its leaderboard. The URL you log in with is saved, so later commands reuse it.
 
 ## What leaves your machine
 
